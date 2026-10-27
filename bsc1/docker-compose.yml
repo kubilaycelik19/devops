@@ -1,0 +1,69 @@
+services:
+  # 1. VERİTABANI
+  db:
+    image: postgres:15-alpine
+    container_name: user_db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: users_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. USER SERVİSİ
+  user_service:
+    image: ghcr.io/kubilaycelik19/user_service:latest
+    container_name: user_service
+    restart: always
+    environment:
+      - PORT=${USER_CONTAINER_PORT}
+      - DB_HOST=db
+      - DB_USER=admin
+      - DB_PASSWORD=secretpassword
+      - DB_NAME=users_db
+    depends_on:
+      - db
+    ports:
+      - "${USER_HOST_PORT}:${USER_CONTAINER_PORT}"
+
+  # 3. ORDER SERVİSİ
+  order_service:
+    image: ghcr.io/kubilaycelik19/order_service:latest
+    container_name: order_service
+    restart: always
+    environment:
+      - PORT=${ORDER_CONTAINER_PORT}
+    ports:
+      - "${ORDER_HOST_PORT}:${ORDER_CONTAINER_PORT}"
+
+  # 4. FRONTEND SERVİSİ
+  frontend_service:
+    image: ghcr.io/kubilaycelik19/frontend_service:latest
+    container_name: frontend_service
+    restart: always
+    environment:
+      - PORT=${FRONTEND_CONTAINER_PORT}
+    ports:
+      - "${FRONTEND_HOST_PORT}:${FRONTEND_CONTAINER_PORT}"
+
+  # 5. NGINX REVERSE PROXY
+  nginx:
+    image: nginx:alpine
+    container_name: api_gateway
+    restart: always
+    environment:
+      - USER_CONTAINER_PORT=${USER_CONTAINER_PORT}
+      - ORDER_CONTAINER_PORT=${ORDER_CONTAINER_PORT}
+      - FRONTEND_CONTAINER_PORT=${FRONTEND_CONTAINER_PORT}
+    ports:
+      - "${NGINX_HOST_PORT}:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - user_service
+      - order_service
+      - frontend_service
+
+volumes:
+  postgres_data:

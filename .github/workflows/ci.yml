@@ -1,0 +1,56 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+# GitHub'a imaj yazma (packages: write) yetkisi
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodların çekilmesi
+        uses: actions/checkout@v4
+
+      - name: GHCR Girişi
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Docker Buildx ortamını hazırla
+      - name: Docker Buildx kur
+        uses: docker/setup-buildx-action@v3
+
+      # 3. USER SERVICE: Derle ve GHCR'a Yükle
+      - name: User Service Derle ve Pushla
+        uses: docker/build-push-action@v5
+        with:
+          context: ./bsc1/user_service
+          file: ./bsc1/user_service/dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/user_service:latest
+
+      # 4. ORDER SERVICE: Derle ve GHCR'a Yükle
+      - name: Order Service Derle ve Pushla
+        uses: docker/build-push-action@v5
+        with:
+          context: ./bsc1/order_service
+          file: ./bsc1/order_service/dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/order_service:latest
+
+      # 5. FRONTEND SERVICE: Derle ve GHCR'a Yükle
+      - name: Frontend Service Derle ve Pushla
+        uses: docker/build-push-action@v5
+        with:
+          context: ./bsc1/frontend_service
+          file: ./bsc1/frontend_service/dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/frontend_service:latest

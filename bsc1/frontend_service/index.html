@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mikroservis Port Yönetimi</title>
+</head>
+
+<body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
+    <h1>Mikroservis Yönetim Paneli</h1>
+    <p>Nginx 80 üzerinden veya doğrudan açık host portlarından test edebilirsiniz.</p>
+
+    <button onclick="veriGetir('/api/users')">Kullanıcıları Getir (Nginx)</button>
+    <button onclick="veriGetir('/api/orders')">Siparişleri Getir (Nginx)</button>
+
+    <pre id="sonuc" style="margin-top: 30px; font-size: 16px; background: #eee; padding: 20px;"></pre>
+
+    <script>
+        function veriGetir(url) {
+            fetch(url)
+                .then(r => r.json())
+                .then(data => document.getElementById('sonuc').innerText = JSON.stringify(data, null, 2))
+                .catch(err => document.getElementById('sonuc').innerText = "Hata: " + err);
+        }
+    </script>
+</body>
+
+</html>
