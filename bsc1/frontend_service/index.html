@@ -1,28 +1,459 @@
 <!DOCTYPE html>
-<html lang="tr">
-
+<html lang="tr" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>Mikroservis Port Yönetimi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Observability & Operations Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --grafana-bg: #111217;
+            --grafana-card: #181b1f;
+            --grafana-border: #22252b;
+            --grafana-accent-orange: #ff780a;
+            --grafana-accent-green: #73bf69;
+            --grafana-accent-blue: #5794f2;
+            --grafana-accent-red: #f2495c;
+        }
+        body {
+            background-color: var(--grafana-bg);
+            color: #d8d9da;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .card-grafana {
+            background-color: var(--grafana-card);
+            border: 1px solid var(--grafana-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .badge-status-ok { background-color: rgba(115, 191, 105, 0.15); color: var(--grafana-accent-green); border: 1px solid var(--grafana-accent-green); }
+        .badge-status-err { background-color: rgba(242, 73, 92, 0.15); color: var(--grafana-accent-red); border: 1px solid var(--grafana-accent-red); }
+        .badge-qty { background-color: rgba(87, 148, 242, 0.15); color: var(--grafana-accent-blue); border: 1px solid var(--grafana-accent-blue); }
+        .log-box {
+            max-height: 480px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #3e4451 var(--grafana-card);
+        }
+        .table-grafana {
+            --bs-table-bg: transparent;
+            --bs-table-color: #d8d9da;
+            --bs-table-border-color: var(--grafana-border);
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 0.85rem;
+        }
+        .table-grafana tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        .stat-value {
+            font-family: "JetBrains Mono", Consolas, monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+    </style>
 </head>
+<body class="py-4">
+    <div class="container-fluid px-4">
+        <!-- HEADER -->
+        <header class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom border-secondary-subtle">
+            <div class="d-flex align-items-center gap-3">
+                <span class="fs-3 text-warning"><i class="bi bi-speedometer2"></i></span>
+                <div>
+                    <h1 class="h4 fw-bold mb-0 text-white">E-Commerce Operation & Metrics Console</h1>
+                    <small class="text-secondary">On-Prem Microservices Architecture / Live Traffic Dashboard</small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="http://localhost:3000" target="_blank" class="btn btn-warning btn-sm text-dark fw-semibold">
+                    <i class="bi bi-graph-up"></i> Grafana Metrics ↗
+                </a>
+            </div>
+        </header>
 
-<body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
-    <h1>Mikroservis Yönetim Paneli</h1>
-    <p>Nginx 80 üzerinden veya doğrudan açık host portlarından test edebilirsiniz.</p>
+        <!-- KPI STAT BAR -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card-grafana p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <small class="text-secondary text-uppercase fw-bold">Toplam Sipariş</small>
+                        <div class="stat-value text-white" id="statTotalOrders">0</div>
+                    </div>
+                    <i class="bi bi-box-seam fs-1 text-primary opacity-50"></i>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-grafana p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <small class="text-secondary text-uppercase fw-bold">Aktif Kullanıcı Havuzu</small>
+                        <div class="stat-value text-success" id="statTotalUsers">0</div>
+                    </div>
+                    <i class="bi bi-people fs-1 text-success opacity-50"></i>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-grafana p-3 d-flex align-items-center justify-content-between">
+                    <div>
+                        <small class="text-secondary text-uppercase fw-bold">Sistem Durumu</small>
+                        <div class="stat-value text-warning fs-4 mt-1"><i class="bi bi-broadcast"></i> CANLI</div>
+                    </div>
+                    <i class="bi bi-activity fs-1 text-warning opacity-50"></i>
+                </div>
+            </div>
+        </div>
 
-    <button onclick="veriGetir('/api/users')">Kullanıcıları Getir (Nginx)</button>
-    <button onclick="veriGetir('/api/orders')">Siparişleri Getir (Nginx)</button>
+        <div class="row g-4">
+            <!-- SOL PANEL -->
+            <div class="col-lg-4">
+                <!-- SİPARİŞ VERME FORMU -->
+                <div class="card-grafana p-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-white mb-0"><i class="bi bi-cart-plus me-1 text-primary"></i> Sipariş Oluştur</h6>
+                        <span class="badge badge-qty">order_service</span>
+                    </div>
+                    <form id="orderForm">
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary">Kullanıcı Seç</label>
+                            <select class="form-select form-select-sm" id="orderUserSelect" required>
+                                <option value="" disabled selected>Kullanıcı yükleniyor...</option>
+                            </select>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-8">
+                                <label class="form-label small text-secondary">Ürün Seç</label>
+                                <select class="form-select form-select-sm" id="orderProductSelect" required>
+                                    <option value="MacBook Pro M3 Max">MacBook Pro M3 Max</option>
+                                    <option value="Dell UltraSharp 34 Monitor">Dell UltraSharp 34" Monitor</option>
+                                    <option value="Keychron Q1 Mechanical Keyboard">Keychron Q1 Keyboard</option>
+                                    <option value="Logitech MX Master 3S">Logitech MX Master 3S</option>
+                                    <option value="Sony WH-1000XM5 Kulaklık">Sony WH-1000XM5</option>
+                                    <option value="CalDigit TS4 Thunderbolt Dock">CalDigit TS4 Hub</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-secondary">Miktar</label>
+                                <input type="number" class="form-control form-control-sm" id="orderQuantity" value="1" min="1" max="20" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold">
+                            <i class="bi bi-send-fill me-1"></i> Sipariş Gönder
+                        </button>
+                    </form>
+                    <div id="orderStatusAlert" class="mt-2 small"></div>
+                </div>
 
-    <pre id="sonuc" style="margin-top: 30px; font-size: 16px; background: #eee; padding: 20px;"></pre>
+                <!-- HATA SENARYOSU TEST KARTI (DİNAMİK 404) -->
+                <div class="card-grafana p-3 mb-4 border-danger-subtle">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-danger mb-0"><i class="bi bi-shield-slash me-1"></i> 404 Hata Simülasyonu</h6>
+                        <span class="badge badge-status-err">Fail-Safe Test</span>
+                    </div>
+                    <p class="small text-secondary mb-3">
+                        DB taranarak kesinlikle sistemde bulunmayan 4 basamaklı bir hayalet ID ve rastgele ürün seçilir.
+                    </p>
+                    
+                    <div class="bg-dark p-2 rounded mb-3 border border-secondary font-monospace small">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-secondary">Hayalet User ID:</span>
+                            <span class="text-warning fw-bold" id="previewGhostId">Hesaplanıyor...</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-secondary">Seçilen Ürün:</span>
+                            <span class="text-info" id="previewGhostProduct">Hesaplanıyor...</span>
+                        </div>
+                    </div>
 
+                    <button class="btn btn-outline-danger btn-sm w-100 fw-semibold" onclick="triggerDynamicInvalidOrder()">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Hatalı Siparişi Tetikle (404 Üret)
+                    </button>
+                    <div id="dynamicErrorResult" class="mt-2 small font-monospace"></div>
+                </div>
+
+                <!-- AKTİF KULLANICILAR VE EKLEME BUTONU -->
+                <div class="card-grafana p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold text-white mb-0"><i class="bi bi-people me-1 text-success"></i> Aktif Kullanıcılar (10 Rastgele)</h6>
+                            <small class="text-secondary" style="font-size: 0.75rem;">Havuzdan rastgele 10 kullanıcı listelenir</small>
+                        </div>
+                        <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                            <i class="bi bi-person-plus-fill"></i> Yeni Kullanıcı
+                        </button>
+                    </div>
+                    <ul class="list-group list-group-flush log-box" id="userPoolList" style="max-height: 220px;">
+                        <li class="list-group-item bg-transparent text-secondary small">Kullanıcılar yükleniyor...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- SAĞ PANEL: CANLI SİPARİŞ AKIŞI -->
+            <div class="col-lg-8">
+                <div class="card-grafana p-3 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="p-1 rounded bg-dark border border-secondary text-warning font-monospace small"><i class="bi bi-terminal"></i></span>
+                            <h6 class="fw-bold text-white mb-0">Canlı Sipariş & Olay Akışı</h6>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark border border-secondary text-secondary" id="lastUpdated">Senkronize ediliyor...</span>
+                            <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive log-box">
+                        <table class="table table-grafana align-middle mb-0">
+                            <thead>
+                                <tr class="text-secondary border-secondary">
+                                    <th># SIPARIS ID</th>
+                                    <th>KULLANICI</th>
+                                    <th>ÜRÜN ADI</th>
+                                    <th>MİKTAR</th>
+                                    <th>DURUM</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <tr><td colspan="5" class="text-secondary text-center py-4">Sipariş verisi bekleniyor...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YENİ KULLANICI EKLEME MODAL'I -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content card-grafana border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white"><i class="bi bi-person-plus text-success me-2"></i>Yeni Kullanıcı Ekle</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="addUserModalForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary">Kullanıcı Adı</label>
+                            <input type="text" class="form-control form-control-sm" id="modalUsername" placeholder="orn: kubilay_devops" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary">E-Posta</label>
+                            <input type="email" class="form-control form-control-sm" id="modalEmail" placeholder="orn: kubilay@enterprise.local" required>
+                        </div>
+                        <div id="modalAlert" class="small"></div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                        <button type="submit" class="btn btn-success btn-sm">Kaydet</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function veriGetir(url) {
-            fetch(url)
-                .then(r => r.json())
-                .then(data => document.getElementById('sonuc').innerText = JSON.stringify(data, null, 2))
-                .catch(err => document.getElementById('sonuc').innerText = "Hata: " + err);
+        let cachedUsers = [];
+        let modalInstance = null;
+
+        const GHOST_PRODUCTS = [
+            "Quantum Core Processor", "Dark Matter GPU", "Neural Interface Rig",
+            "Ghost Server Blade", "Holographic Array Module", "Sub-Zero Liquid Cooler"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            modalInstance = new bootstrap.Modal(document.getElementById('addUserModal'));
+            loadUsers();
+            loadOrders();
+            setInterval(loadOrders, 3000);
+            setInterval(loadUsers, 15000);
+        });
+
+        // Veritabanında OLMAYAN 4 basamaklı rastgele bir ID üretir
+        function generateNonExistentUserId() {
+            const existingIds = new Set(cachedUsers.map(u => u.id));
+            let ghostId;
+            let attempts = 0;
+            do {
+                // 1000 - 9999 arası 4 basamaklı rastgele ID
+                ghostId = Math.floor(1000 + Math.random() * 9000);
+                attempts++;
+            } while (existingIds.has(ghostId) && attempts < 1000);
+
+            return ghostId;
+        }
+
+        // Hata kutusundaki salt okunur önizlemeyi tazele
+        function refreshGhostPreview() {
+            const ghostId = generateNonExistentUserId();
+            const ghostProduct = GHOST_PRODUCTS[Math.floor(Math.random() * GHOST_PRODUCTS.length)];
+            
+            document.getElementById('previewGhostId').innerText = `#${ghostId} (DB'de Yok)`;
+            document.getElementById('previewGhostProduct').innerText = ghostProduct;
+
+            return { ghostId, ghostProduct };
+        }
+
+        // 1. KULLANICILARI ÇEK VE LİSTELE
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/users');
+                if (!res.ok) return;
+                cachedUsers = await res.json();
+
+                document.getElementById('statTotalUsers').innerText = cachedUsers.length;
+
+                // Sipariş select kutusunu doldur
+                const select = document.getElementById('orderUserSelect');
+                const previousVal = select.value;
+                select.innerHTML = cachedUsers.map(u => 
+                    `<option value="${u.id}">#${u.id} - ${u.username}</option>`
+                ).join('');
+                if (previousVal) select.value = previousVal;
+
+                // Havuzdan rastgele 10 adet seç
+                const shuffled = [...cachedUsers].sort(() => 0.5 - Math.random());
+                const random10 = shuffled.slice(0, 10);
+
+                const userList = document.getElementById('userPoolList');
+                if (random10.length === 0) {
+                    userList.innerHTML = '<li class="list-group-item bg-transparent text-secondary small">Kayıtlı kullanıcı yok.</li>';
+                } else {
+                    userList.innerHTML = random10.map(u => `
+                        <li class="list-group-item bg-transparent border-secondary text-light d-flex justify-content-between align-items-center py-2 px-1">
+                            <div>
+                                <span class="badge bg-secondary font-monospace me-2">#${u.id}</span>
+                                <span class="fw-semibold">${u.username}</span>
+                            </div>
+                            <small class="text-secondary font-monospace">${u.email}</small>
+                        </li>
+                    `).join('');
+                }
+
+                // Önizlemeyi güncelle
+                refreshGhostPreview();
+            } catch (err) {
+                console.error("Kullanıcılar yüklenemedi:", err);
+            }
+        }
+
+        // 2. DİNAMİK 404 HATA TESTİ
+        async function triggerDynamicInvalidOrder() {
+            const { ghostId, ghostProduct } = refreshGhostPreview();
+            const resultBox = document.getElementById('dynamicErrorResult');
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: ghostId,
+                        product_name: ghostProduct,
+                        quantity: 1
+                    })
+                });
+                const data = await res.json();
+                
+                if (res.status === 404) {
+                    resultBox.innerHTML = `
+                        <span class="text-danger">
+                            <i class="bi bi-check2-circle"></i> HTTP 404 Yakalandı!<br>
+                            Mesaj: "${data.detail}" (User ID: ${ghostId})
+                        </span>
+                    `;
+                } else {
+                    resultBox.innerHTML = `<span class="text-warning">HTTP ${res.status}: ${JSON.stringify(data)}</span>`;
+                }
+            } catch (err) {
+                resultBox.innerHTML = `<span class="text-danger">Bağlantı hatası: ${err.message}</span>`;
+            }
+        }
+
+        // 3. YENİ KULLANICI EKLE
+        document.getElementById('addUserModalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('modalUsername').value.trim();
+            const email = document.getElementById('modalEmail').value.trim();
+            const alertBox = document.getElementById('modalAlert');
+
+            try {
+                const res = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alertBox.innerHTML = `<span class="text-success">✔ Eklendi (ID: ${data.id})</span>`;
+                    setTimeout(() => {
+                        document.getElementById('addUserModalForm').reset();
+                        alertBox.innerHTML = '';
+                        modalInstance.hide();
+                        loadUsers();
+                    }, 500);
+                } else {
+                    alertBox.innerHTML = `<span class="text-danger">✖ ${JSON.stringify(data.detail || data)}</span>`;
+                }
+            } catch (err) {
+                alertBox.innerHTML = `<span class="text-danger">${err.message}</span>`;
+            }
+        });
+
+        // 4. SİPARİŞ OLUŞTUR
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = parseInt(document.getElementById('orderUserSelect').value);
+            const productName = document.getElementById('orderProductSelect').value;
+            const quantity = parseInt(document.getElementById('orderQuantity').value);
+            const statusBox = document.getElementById('orderStatusAlert');
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, product_name: productName, quantity: quantity })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    statusBox.innerHTML = `<span class="text-success">✔ Sipariş #${data.id} kaydedildi.</span>`;
+                    loadOrders();
+                    setTimeout(() => { statusBox.innerHTML = ''; }, 3000);
+                } else {
+                    statusBox.innerHTML = `<span class="text-danger">✖ ${data.detail || 'Hata oluştu'}</span>`;
+                }
+            } catch (err) {
+                statusBox.innerHTML = `<span class="text-danger">${err.message}</span>`;
+            }
+        });
+
+        // 5. CANLI SİPARİŞLERİ YÜKLE
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                if (!res.ok) return;
+                const orders = await res.json();
+
+                document.getElementById('statTotalOrders').innerText = orders.length;
+                document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString();
+
+                const tbody = document.getElementById('ordersTableBody');
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-secondary text-center py-4">Henüz sipariş kaydı yok.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = orders.slice(-20).reverse().map(o => `
+                    <tr>
+                        <td class="font-monospace text-warning fw-bold">#ORD-${o.id.toString().padStart(4, '0')}</td>
+                        <td><span class="badge bg-secondary font-monospace">User #${o.user_id}</span></td>
+                        <td class="text-white fw-semibold">${o.product_name}</td>
+                        <td><span class="badge badge-qty">x${o.quantity}</span></td>
+                        <td><span class="badge badge-status-ok"><i class="bi bi-check-circle-fill me-1"></i>PROCESSED</span></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Siparişler yüklenemedi:", err);
+            }
         }
     </script>
 </body>
-
 </html>

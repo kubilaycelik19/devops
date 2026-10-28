@@ -109,9 +109,20 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+
+  # 9. TRAFFIC GENERATOR (Sentetik Trafik Botu)
+  traffic_generator:
+    build: ./traffic_generator
+    container_name: traffic_generator
+    restart: always
+    environment:
+      - GATEWAY_URL=http://nginx:80
+    depends_on:
+      - nginx
 
 volumes:
   user_postgres_data:

@@ -18,6 +18,21 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
 
+# Panel açıldığında hazır görünen başlangıç kullanıcıları.
+# Yeni kullanıcı ekleme akışı ayrıca duruyor; bu kayıtlar yalnızca yoksa yazılır.
+SEED_USERS = [
+    ("ayse_demir", "ayse.demir@shop.local"),
+    ("mehmet_yilmaz", "mehmet.yilmaz@shop.local"),
+    ("elif_kaya", "elif.kaya@shop.local"),
+    ("can_ozkan", "can.ozkan@shop.local"),
+    ("zeynep_arslan", "zeynep.arslan@shop.local"),
+    ("burak_celik", "burak.celik@shop.local"),
+    ("selin_aksoy", "selin.aksoy@shop.local"),
+    ("emre_dogan", "emre.dogan@shop.local"),
+    ("deniz_kurt", "deniz.kurt@shop.local"),
+    ("ece_sahin", "ece.sahin@shop.local"),
+]
+
 def get_db_connection():
     # Veritabanı konteyneri yeni ayağa kalkarken bağlantıyı birkaç kez dener
     retries = 5
@@ -48,6 +63,14 @@ def startup_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        cur.executemany(
+            """
+            INSERT INTO users (username, email)
+            VALUES (%s, %s)
+            ON CONFLICT (email) DO NOTHING;
+            """,
+            SEED_USERS,
+        )
         conn.commit()
     conn.close()
 

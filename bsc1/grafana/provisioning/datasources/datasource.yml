@@ -1,0 +1,20 @@
+apiVersion: 1
+
+# Grafana 13, var olan kaydın uid değerini yerinde değiştiremiyor.
+# Eski otomatik uid silinir, panellerin beklediği uid ile yeniden yazılır.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
+datasources:
+  - name: Prometheus
+    uid: Prometheus
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 5s
