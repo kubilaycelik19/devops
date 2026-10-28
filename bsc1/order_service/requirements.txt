@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+psycopg2-binary
+pydantic
+httpx
+prometheus-fastapi-instrumentator==7.0.0

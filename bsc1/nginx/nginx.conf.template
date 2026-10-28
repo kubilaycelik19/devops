@@ -1,19 +1,22 @@
 server {
     listen 80;
 
-    location / {
-        proxy_pass http://frontend_service:${FRONTEND_CONTAINER_PORT}/;
-    }
+    # Docker'ın dahili DNS sunucusu: 127.0.0.11
+    # valid=5s: Çözülen IP adresini en fazla 5 saniye hafızada tut, sonra yeniden sorgula.
+    resolver 127.0.0.11 valid=5s;
 
-    location /api/frontend {
-        proxy_pass http://frontend_service:${FRONTEND_CONTAINER_PORT}/;
+    location / {
+        set $upstream_frontend frontend_service;
+        proxy_pass http://$upstream_frontend:${FRONTEND_CONTAINER_PORT}/;
     }
 
     location /api/users {
-        proxy_pass http://user_service:${USER_CONTAINER_PORT}/;
+        set $upstream_user user_service;
+        proxy_pass http://$upstream_user:${USER_CONTAINER_PORT}/users;
     }
 
     location /api/orders {
-        proxy_pass http://order_service:${ORDER_CONTAINER_PORT}/;
+        set $upstream_order order_service;
+        proxy_pass http://$upstream_order:${ORDER_CONTAINER_PORT}/orders;
     }
 }

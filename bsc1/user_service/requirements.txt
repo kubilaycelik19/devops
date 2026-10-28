@@ -1,1 +1,8 @@
+fastapi
+uvicorn
 psycopg2-binary
+pydantic
+email-validator
+email-validator
+pydantic
+prometheus-fastapi-instrumentator==7.0.0
