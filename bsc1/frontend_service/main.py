@@ -6,8 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="Frontend Service")
 
-# index.html, main.py ile aynı dizinde
-templates = Jinja2Templates(directory=Path(__file__).resolve().parent)
+templates = Jinja2Templates(directory=Path(__file__).resolve().parent / "templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

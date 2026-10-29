@@ -33,7 +33,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./bsc1/user_service
-          file: ./bsc1/user_service/dockerfile
+          file: ./bsc1/user_service/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/user_service:latest
 
@@ -42,7 +42,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./bsc1/order_service
-          file: ./bsc1/order_service/dockerfile
+          file: ./bsc1/order_service/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/order_service:latest
 
@@ -51,6 +51,15 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./bsc1/frontend_service
-          file: ./bsc1/frontend_service/dockerfile
+          file: ./bsc1/frontend_service/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/frontend_service:latest
+
+      # 6. TRAFFIC GENERATOR: Derle ve GHCR'a Yükle
+      - name: Traffic Generator Derle ve Pushla
+        uses: docker/build-push-action@v5
+        with:
+          context: ./bsc1/traffic_generator
+          file: ./bsc1/traffic_generator/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/traffic_generator:latest
